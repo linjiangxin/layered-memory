@@ -30,6 +30,7 @@ python memory/检索.py 咖啡
 python memory/作废.py 咖啡 --reason "改喝焙茶了" --dry
 node tools/记忆召回.mjs "偏好"
 python tools/记忆账本.py --verify
+python loop.py "找 split_status" --grep split_status --path memory --dry
 python -m unittest discover -s tests -v
 ```
 
@@ -88,6 +89,71 @@ import core
 
 `keyword` 可以是一个字符串（空格分隔 = 必须同时出现），也可以是词列表。`dry=True` 只算不写。
 
+## 子代理经验层（可选）
+
+模型把活儿派给子代理时，子代理的中间步骤不进主上下文、只回一段结论——这是好事，但代价是**踩过的坑也随之丢掉了**。这一层就是把坑留下来。
+
+`memory/经验.py` 往 `data/长期/经验.md` 追加一行，形状和别的记忆条目一模一样，所以检索、作废、账本自动认得它：
+
+```python
+import sys; sys.path.insert(0, "memory")
+import 经验
+
+经验.record("全仓搜关键字", path="主脑自己 grep 二十个文件", result="败",
+            cause="上下文被原文灌满", loc="memory/core.py:141",
+            next_try="起子代理，只回 file:line")
+经验.lookup("跨文件搜索")     # 复用 core 的打分，只在这份经验里查
+经验.recent(5)                # 最后 5 条
+```
+
+写进去长这样：
+
+```markdown
+- [2026-11-06] 任务：全仓搜关键字 ｜ 路子：主脑自己 grep 二十个文件 ｜ 结果：败 ｜ 死因：上下文被原文灌满 ｜ 位置：memory/core.py:141 ｜ 下次：起子代理，只回 file:line
+```
+
+三条硬规矩，写进代码不靠自觉：
+
+- `result` 只认 `成` / `败` / `半`，写别的直接拒绝；
+- 结果是 `败` 但没写 `cause` → 拒绝写入。**只写「不行」的记录等于没记**；
+- 同一条记第二次返回原来的行号，不重复追加（`core.add` 去重）。
+
+派活门槛也写在库里，供主脑自检：要扫 3 个以上文件或读整个目录 → 派子代理；单点读一个文件、改一行 → 自己动手；同一个坑第二次踩 → 说明这页没查。
+
+## 主循环（第二步）
+
+记忆层只负责**记和查**，`loop.py` 负责**怎么用**。三步，不多加：
+
+1. **查** —— `经验.lookup(task)`。这活儿以前干过没有？撞上「败」，先把死因摆出来，再决定换不换思路。
+2. **派** —— 把活儿交给 `delegate(task)`。子代理在隔离环境里干，中间过程不进主循环，回来的只有一条 dict。
+3. **落** —— `经验.record(...)` 写进 `长期/经验.md`。**不写日记**：日记过 14 天就不进检索了，经验正好相反，越老越该在。
+
+```bash
+python loop.py "在 memory 里找 split_status" --grep split_status --path memory --dry
+```
+
+```
+[1] 查经验：在 memory 里找 split_status
+    没走过这条路。
+[2] 派活：子代理在隔离环境里干，中间过程不进主循环。
+    回传：扫了 7 个文件，命中 3 处
+    位置：memory/core.py:58, memory/core.py:158, memory/经验.py:78
+[3] 落经验（--dry，不落盘）：
+```
+
+注意第 2 步回来的是**位置**，不是内容——这就是「不污染主上下文」的具体形状。
+
+接真模型只要写一个同签名的函数，主循环一个字都不用改：
+
+```python
+def my_delegate(task: str) -> dict:
+    # …… 调你的模型 / 你的子智能体 ……
+    return {"result": "成", "path": "子代理走了哪条路子",
+            "conclusion": "一句话结论", "loc": "file:line", "next_try": "下次换什么"}
+```
+
+`--fake 成|败|半` 是给测试和演示用的假子代理，别拿它判断真实世界的成败。
+
 ## 命令行怎么用
 
 ```bash
@@ -98,6 +164,8 @@ python memory/作废.py 咖啡 --reason "改喝焙茶了"
 node tools/记忆召回.mjs "他刚说的这句话"           # 拼 prompt 用的那 3 条
 python tools/记忆账本.py --verify
 python tools/记忆体检.py --line
+python memory/经验.py 查 跨文件搜索 -n 3                       # 查这活儿以前怎么干过
+python memory/经验.py 最近 -n 5
 ```
 
 身体上只有两条要记：**账本是先 `--sync` 再 `--verify`**；**作废只作用于 `长期/`，日记不作废**。
@@ -109,15 +177,17 @@ python tools/记忆体检.py --line
 │  ├─ 长期/
 │  │  ├─ 事实库.md          # 一条一行 "- …"
 │  │  ├─ 索引.md            # 主题索引
+│  │  ├─ 经验.md            # 子代理的工程执行记录（成/败/半 + 死因）
 │  │  └─ 主题/*.md          # 关系与约定.md / 零碎见闻.md …
 │  ├─ 日记/YYYY-MM-DD.md     # 一天一个文件，一条一个 "## " 小节
 │  ├─ 短期记忆.md            # 一份 ≤600 字的交接卡
 │  ├─ 记忆权重.json          # {正文: {src, imp, S, last}}
 │  ├─ 使用记录.jsonl         # 每次召回/命中一行，只追加
 │  └─ 记忆账本.json          # {sha256: {len, src, text}}
-├─ memory/                   # core.py + 五个命令行脚本
+├─ loop.py                   # 主循环：查经验 → 派子代理 → 落经验
+├─ memory/                   # core.py + 六个命令行脚本
 ├─ tools/                    # 召回(mjs)、账本、体检
-└─ tests/                    # 五条底线测试
+└─ tests/                    # 底线测试
 ```
 
 一条长期记忆就是一行；作废后只是尾巴长一点：
