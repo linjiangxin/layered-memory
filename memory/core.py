@@ -47,6 +47,10 @@ IMP_BY_FILE = {"关系与约定.md": 5, "事实库.md": 4, "索引.md": 2}
 MIN_HIT = 0.34          # 查询二字组被覆盖的比例门槛
 SKIP_FILES = {"压缩.md"}
 
+# ---- 可选插件：同义扩展（只扩「匹配集合」，不动查询文本）----------------
+SYN_PLUGIN = "同义扩展"   # plugins/同义扩展.json；没有这个文件 = 不启用
+SYN_W = 0.7               # 兜底权重：插件没写 weight 时用这个
+
 # 作废标记：条目行尾的 HTML 注释（markdown 不显示，不影响列表解析）
 STATUS_RE = re.compile(r"\s*<!--\s*status\s*:\s*([A-Za-z]+).*?-->\s*$")
 
@@ -74,6 +78,65 @@ def dice(a, b):
     if not a or not b:
         return 0.0
     return 2.0 * len(a & b) / (len(a) + len(b))
+
+
+def normalize(s):
+    """去掉空白/标点、转小写 —— 只用来比同义组，不参与打分。"""
+    return re.sub(r"[\s\W_]+", "", str(s or "").lower())
+
+
+_PLUGIN_MOD = None
+
+
+def plugin_module():
+    """按路径加载同目录的 插件.py（不靠 sys.path，重载 core 也不会串味）。"""
+    global _PLUGIN_MOD
+    if _PLUGIN_MOD is None:
+        import importlib.util
+        here = os.path.dirname(os.path.abspath(__file__))
+        spec = importlib.util.spec_from_file_location("lm_插件", os.path.join(here, "插件.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _PLUGIN_MOD = mod
+    return _PLUGIN_MOD
+
+
+def synonym_plugin():
+    """同义扩展插件；没装 / enabled:false / JSON 坏了 → None（静默，检索照跑）。"""
+    try:
+        return plugin_module().load(SYN_PLUGIN)
+    except Exception:
+        return None
+
+
+def expand_query(query, plugin=None):
+    """查询 → (原查询二字组, 同义扩展二字组, 权重)。
+
+    只算「这条记忆里还有哪些词该算命中」，不改 query 本身；
+    组内任一词被查询命中就展开整组（不做 key/value 方向区分，双向生效）。
+    没插件 / 关掉 → ({...}, set(), 0.0)，等价于原来的字面检索。
+    """
+    qb = bigrams(query)
+    plug = synonym_plugin() if plugin is None else plugin
+    if not plug:
+        return qb, set(), 0.0
+    try:
+        weight = float(plug.get("weight", SYN_W))
+    except (TypeError, ValueError):
+        weight = SYN_W
+    weight = min(1.0, max(0.0, weight))
+    groups = plug.get("groups") or []
+    qn = normalize(query)
+    extra = set()
+    for group in groups:
+        if not isinstance(group, (list, tuple)):
+            continue
+        words = [w for w in (normalize(x) for x in group) if w]
+        if not any((w == qn) if len(w) == 1 else (w in qn) for w in words):
+            continue
+        for w in words:
+            extra |= bigrams(w)
+    return qb, extra - qb, weight
 
 
 def load_weights():
@@ -189,7 +252,7 @@ def _rank(query, include_deprecated=False, legacy=False):
     q = (query or "").strip()
     if not q:
         return [], 0
-    qb = bigrams(q)
+    qb, extra, syn_w = expand_query(q)
     if not qb:
         return [], 0
     w = load_weights()
@@ -201,9 +264,13 @@ def _rank(query, include_deprecated=False, legacy=False):
             hidden += 1
             continue
         eb = bigrams(text)
-        s = len(qb & eb) / float(len(qb))   # 查询被覆盖的比例，长条目不吃亏
-        if s < MIN_HIT:
+        direct = len(qb & eb)                    # 真命中
+        syn = len(extra & eb) if extra else 0    # 同义扩展命中（按插件 weight 折）
+        # 门槛看「覆盖了多少」，扩展命中也算覆盖，但计分时要折减
+        if (direct + syn) / float(len(qb)) < MIN_HIT:
             continue
+        # 分母仍是原查询长度：扩展只加分子，不会稀释精确命中；封顶 1.0
+        s = min(1.0, (direct + syn_w * syn) / float(len(qb)))
         rec = w.get(text)
         u = usage.get(body_sha(text)) or {"used": 0, "last_used": None}
         score = s * (0.35 + 0.65 * spell(rec, imp, u["used"], legacy, u["last_used"])) * (0.5 + imp / 10.0)
