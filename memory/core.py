@@ -44,6 +44,8 @@ LEDGER = os.path.abspath(os.environ.get("MEM_LEDGER") or os.path.join(MEM, "记�
 # ---- 打分参数（和 检索.py 原来的一模一样）--------------------------------
 DECAY, FACTOR = 0.5, 19.0 / 81.0
 USE_GAIN = 0.6
+SEARCH_W = 0.5          # 检索命中的折算系数：搜到 ≠ 真的用上
+RECORD_ENV = "LAYERED_MEMORY_RECORD"   # =0 时 search 完全不写使用记录
 IMP_BY_FILE = {"关系与约定.md": 5, "事实库.md": 4, "索引.md": 2}
 MIN_HIT = 0.34          # 查询二字组被覆盖的比例门槛
 SKIP_FILES = {"压缩.md"}
@@ -178,6 +180,95 @@ def body_sha(body):
     return hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
 
 
+def use_weight(rec):
+    """一条使用记录折成几次「真用」。
+
+    检索命中的（via="search"）按 weight 折 —— 被搜到不等于被用上；
+    人显式确认的（老记录没有 via 字段，或 via="manual"）算满值 1.0。
+    """
+    if str(rec.get("via") or "") == "search":
+        try:
+            w = float(rec.get("weight", SEARCH_W))
+        except (TypeError, ValueError):
+            w = SEARCH_W
+        return min(1.0, max(0.0, w))
+    return 1.0
+
+
+def recording_on(record=True):
+    """这次检索要不要回写使用记录：record=False 或 LAYERED_MEMORY_RECORD=0 就不写。"""
+    if record is False:
+        return False
+    return os.environ.get(RECORD_ENV, "").strip() != "0"
+
+
+def record_usage(query, items, *, at=None):
+    """把这次检索命中的条目写进 使用记录.jsonl（同一个 key 同一天只留一行）。
+
+    字段是老记录那套（ts/sha/key/src/query/used/source）再加三个：
+      at      ISO 时间戳（去重只看它的日期部分）
+      via     "search"
+      weight  SEARCH_W（0.5）
+    去重：同 key 同一天已经有一条「算数」的记录（used:true，不管来自搜索还是
+    人确认）就不再追加 —— 同一天反复搜同一条不该把权重顶虚。返回新增行数。
+    写失败只当没记，绝不让检索跟着炸。
+    """
+    rows = []
+    for x in items or []:
+        text = str((x or {}).get("text") or "")
+        if text:
+            rows.append((body_sha(text), x))
+    if not rows:
+        return 0
+    now = at or datetime.datetime.now().isoformat(timespec="seconds")
+    day = str(now)[:10]
+    want = {sha for sha, _x in rows}
+    add = []
+    try:
+        # 追加型写入也整段持锁：读—追加—原子替换，别留半截文件
+        with 锁.rewriting(USE_LOG) as doc:
+            seen = set()
+            for line in doc.text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except Exception:
+                    continue                      # 坏行不拦路
+                if not r.get("used"):
+                    continue                      # 只召回不算数
+                k = str(r.get("sha") or r.get("key") or "")[:16]
+                d = str(r.get("at") or r.get("ts") or "")[:10]
+                if k in want and d == day:
+                    seen.add(k)
+            for sha, x in rows:
+                if sha in seen:
+                    continue
+                seen.add(sha)                     # 一批里重了也只写一条
+                add.append({
+                    "ts": now,
+                    "at": now,
+                    "sha": sha,
+                    "key": sha,
+                    "src": os.path.basename(str(x.get("file") or "")) or str(x.get("src") or ""),
+                    "query": str(query or ""),
+                    "used": True,
+                    "via": "search",
+                    "weight": SEARCH_W,
+                    "source": "search",
+                })
+            if add:
+                base = doc.text
+                if base and not base.endswith("\n"):
+                    base += "\n"                  # 上一行没换行就补一个，别把两行粘在一起
+                doc.text = base + "".join(
+                    json.dumps(r, ensure_ascii=False) + "\n" for r in add)
+    except Exception:
+        return 0
+    return len(add)
+
+
 def load_usage():
     """{sha16: {"used":n, "last_used":"YYYY-MM-DD"|None}}；文件缺失 = 0 次使用。"""
     out = {}
@@ -202,8 +293,8 @@ def load_usage():
             if not sha:
                 continue
             d = out.setdefault(sha, {"used": 0, "last_used": None})
-            d["used"] += 1
-            ts = str(r.get("ts") or "")[:10]
+            d["used"] += use_weight(r)     # 人确认的算满，检索命中的按 weight 折
+            ts = str(r.get("at") or r.get("ts") or "")[:10]
             if ts and (d["last_used"] is None or ts > d["last_used"]):
                 d["last_used"] = ts
     return out
@@ -297,17 +388,23 @@ def _rank(query, include_deprecated=False, legacy=False):
     return out, hidden
 
 
-def search(query, *, limit=3, include_deprecated=False):
+def search(query, *, limit=3, include_deprecated=False, record=True):
     """按字面重合 × 可提取度 × 重要度 打分，返回前 limit 条。
 
     返回 [{"text", "src", "file", "line", "score", "deprecated"}]，
     src 是 "文件:行号" 的展示串，file/line 是拆开的同一份位置。
     日记条目 line 记 0（正文是按小节拼的，没有单一行号）。
+
+    命中会回写一条使用记录（via="search"、weight=SEARCH_W、同 key 同日只留一行），
+    让「可提取度」跟着真实检索慢慢走；纯打分调用传 record=False，
+    或把环境变量 LAYERED_MEMORY_RECORD 设成 "0"，就一个字节都不写。
     """
     items, _hidden = _rank(query, include_deprecated=include_deprecated)
-    if limit is None:
-        return items
-    return items[:max(0, int(limit))]
+    hits = items if limit is None else items[:max(0, int(limit))]
+    if hits and recording_on(record):
+        # 作废条永不自动记账：它已经不是「可提取」的东西了
+        record_usage(query, [x for x in hits if not x.get("deprecated")])
+    return hits
 
 
 def add(text, *, source="事实库", tags=None):

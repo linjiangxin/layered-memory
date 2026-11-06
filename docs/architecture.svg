@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="950" viewBox="0 0 1000 950" role="img" aria-label="分层记忆：记忆层负责记和查，编排层负责查经验、派子代理、落经验，子代理的中间过程不进主上下文；检索打分那一步可选挂同义扩展插件；写路径旁边是可选的并发锁（原子替换 + 文件锁，只包读—改—写）">
   <title>分层记忆 · 两层数据流</title>
-  <desc>上半是记忆层：对话 → 召回 → 注入 prompt；日记 → 固化 → 长期库（事实库、主题、索引、经验）→ 检索打分，结果回到召回；作废给旧条目挂标记。写路径旁边一个虚线框「并发 · 锁」：memory/锁.py 先原子替换（临时文件 → os.replace）再上 msvcrt / fcntl 系统级文件锁，只包读—改—写。检索打分下方挂着一个虚线框的可选插件「同义扩展」：只扩大命中集合、不改查询文本，命中按 0.7 折，关掉即回原字面逻辑。下半是编排层：主循环 loop.py → ① 查经验（memory/经验.py lookup）→ ② 派子代理（隔离环境，delegate(task)）→ ③ 落经验（写回 长期/经验.md）。子代理往下那条虚线被截断，标注 intermediate steps 不进主上下文，回来的只有结论和 file:line。</desc>
+  <desc>上半是记忆层：对话 → 召回 → 注入 prompt；日记 → 固化 → 长期库（事实库、主题、索引、经验）→ 检索打分，结果回到召回；作废给旧条目挂标记。写路径旁边一个虚线框「并发 · 锁」：memory/锁.py 先原子替换（临时文件 → os.replace）再上 msvcrt / fcntl 系统级文件锁，只包读—改—写。检索打分下方挂着一个虚线框的可选插件「同义扩展」：只扩大命中集合、不改查询文本，命中按 0.7 折，关掉即回原字面逻辑。检索命中还会自动回写一条使用记录（via=search，按 0.5 折算，同 key 同日只计一次），可提取度因此跟着真实检索慢慢走。下半是编排层：主循环 loop.py → ① 查经验（memory/经验.py lookup）→ ② 派子代理（隔离环境，delegate(task)）→ ③ 落经验（写回 长期/经验.md）。子代理往下那条虚线被截断，标注 intermediate steps 不进主上下文，回来的只有结论和 file:line。</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -60,6 +60,7 @@
   <rect x="620" y="254" width="132" height="78" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
   <text x="686" y="288" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">检索打分</text>
   <text x="686" y="308" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">跳过作废 · 降序</text>
+  <text x="700" y="240" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#7c8a82">命中自动回写使用记录（折 0.5，同日去重）</text>
 
   <line x1="182" y1="293" x2="220" y2="293" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
   <text x="201" y="248" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">最近 7 天</text>

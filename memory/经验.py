@@ -86,7 +86,7 @@ def _rows():
 
 def lookup(query, limit=3):
     """在经验库里按核心打分检索，返回 [{"text","src","file","line","score","deprecated"}]。"""
-    items = core.search(query, limit=None)
+    items = core.search(query, limit=None, record=False)   # 这里只是打分再筛文件，不记账
     rows = [x for x in items if os.path.basename(x["file"]) == FILE]
     return rows[:max(0, int(limit))]
 

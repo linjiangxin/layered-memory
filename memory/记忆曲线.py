@@ -55,6 +55,7 @@ LONG = os.path.join(MEM, "长期")
 DECAY = 0.5
 FACTOR = 19.0 / 81.0
 USE_GAIN = 0.6   # 每被真用一次，稳定度在 imp 基准上再涨 60%
+SEARCH_W = 0.5   # 检索命中的折算系数（和 core.py 的 SEARCH_W 同一个数）
 
 # 哪类文件里的条目更该被记住
 IMPORTANCE = {
@@ -150,6 +151,17 @@ def touch(db, keyword, grow_weight=False):
 
 # ---------------- 使用记录 ----------------
 
+def use_weight(rec):
+    """一条使用记录折成几次「真用」：检索命中的按 weight 折，人确认的算满值。"""
+    if str(rec.get("via") or "") == "search":
+        try:
+            w = float(rec.get("weight", SEARCH_W))
+        except (TypeError, ValueError):
+            w = SEARCH_W
+        return min(1.0, max(0.0, w))
+    return 1.0
+
+
 def load_usage():
     """读 使用记录.jsonl。文件不存在 / 行坏掉都当没有，绝不报错。
 
@@ -180,14 +192,14 @@ def load_usage():
             sha = str(sha)[:16]
             d = out.setdefault(sha, {"used": 0, "recalled": 0, "last_used": None,
                                      "last_seen": None, "keys": set()})
-            ts = str(rec.get("ts") or "")[:10]
+            ts = str(rec.get("at") or rec.get("ts") or "")[:10]
             if rec.get("key"):
                 d["keys"].add(rec["key"])
             if ts:
                 if d["last_seen"] is None or ts > d["last_seen"]:
                     d["last_seen"] = ts
             if rec.get("used"):
-                d["used"] += 1
+                d["used"] += use_weight(rec)      # 老记录没 via → 当人确认的满值
                 if ts and (d["last_used"] is None or ts > d["last_used"]):
                     d["last_used"] = ts
             else:
@@ -257,11 +269,11 @@ def report(db, usage, show_all=False, legacy=False):
     tot_recall = sum(r["recalled"] for r in view(db, usage, False))
     print("== 记忆库 %d 条 ｜ %s ==" % (len(rows), tag))
     if not legacy:
-        print("   使用记录：used:true %d 次 / 仅召回 %d 次（召回不算使用）" % (tot_used, tot_recall))
+        print("   使用记录：used:true %.1f 次 / 仅召回 %d 次（召回不算使用）" % (tot_used, tot_recall))
 
     if show_all:
         for x in rows:
-            print("R=%.2f S=%5.1f 重要%d %3d天 用%d次/召%d次  %s" %
+            print("R=%.2f S=%5.1f 重要%d %3d天 用%.1f次/召%d次  %s" %
                   (x["R"], x["S"], x["rec"]["imp"], x["t"], x["used"], x["recalled"], x["body"][:36]))
         return
 
@@ -269,7 +281,7 @@ def report(db, usage, show_all=False, legacy=False):
     print("\n-- 今天值得翻一遍 --")
     for x in due:
         print("R=%.2f (%d天没提) %s  %s" %
-              (x["R"], x["t"], ("用%d次" % x["used"]) if not legacy else "", x["body"][:40]))
+              (x["R"], x["t"], ("用%.1f次" % x["used"]) if not legacy else "", x["body"][:40]))
     if not due:
         print("（都还清楚，不用翻）")
 
@@ -292,7 +304,7 @@ def compare(db, usage, n=10):
         for i, x in enumerate(rows, 1):
             o = other_rank.get(x["body"])
             delta = "新" if o is None else ("%+d" % (o - i) if o != i else "—")
-            out.append("%2d. S=%5.1f 用%2d次 位次变化%s  %s" %
+            out.append("%2d. S=%5.1f 用%4.1f次 位次变化%s  %s" %
                        (i, x["S"], x["used"], delta, x["body"][:34]))
         return out
 

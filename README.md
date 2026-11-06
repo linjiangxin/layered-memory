@@ -66,7 +66,7 @@ import core
 
 `key` = `sha256(正文)[:16]`，和账本、使用记录用的是同一把尺。
 
-### `search(query, *, limit=3, include_deprecated=False) -> list[dict]`
+### `search(query, *, limit=3, include_deprecated=False, record=True) -> list[dict]`
 
 ```python
 >>> core.search("咖啡")
@@ -79,6 +79,9 @@ import core
 - 日记条目按 `## ` 小节切，`line` 记 0。
 - 公式：`重合度 × (0.35 + 0.65 × 可提取度) × (0.5 + 重要度/10)`，
   可提取度默认走 `S = 重要度 × (1 + 0.6 × 被用次数)`，次数来自 `data/使用记录.jsonl` 里 `used: true` 的行。
+- **命中会自动记一条使用**：返回的每条（作废条不算）回写一行 `via: "search"`、`weight: 0.5`，按 **0.5** 折算成「用了半次」——搜到不等于用上，权重不许虚高。人显式确认的（`used: true` 且没有 `via` 或 `via: "manual"`）照旧算满值 1.0。
+- **同一天、同一个条目只计一次**：反复搜中同一条不再追加新行，文件不会自己膨胀。
+- **可以关掉**：纯打分调用传 `record=False`；或者设环境变量 `LAYERED_MEMORY_RECORD=0`，一个字节都不写。
 
 ### `deprecate(keyword, *, reason, dry=False) -> dict`
 
@@ -204,7 +207,7 @@ python memory/经验.py 最近 -n 5
 │  ├─ 日记/YYYY-MM-DD.md     # 一天一个文件，一条一个 "## " 小节
 │  ├─ 短期记忆.md            # 一份 ≤600 字的交接卡
 │  ├─ 记忆权重.json          # {正文: {src, imp, S, last}}
-│  ├─ 使用记录.jsonl         # 每次召回/命中一行，只追加
+│  ├─ 使用记录.jsonl         # 每次召回一行；检索命中自动回写一行（折 0.5，同日去重）
 │  └─ 记忆账本.json          # {sha256: {len, src, text}}
 ├─ loop.py                   # 主循环：查经验 → 派子代理 → 落经验
 ├─ memory/                   # core.py + 锁.py（原子写 / 文件锁）+ 六个命令行脚本 + 插件.py
@@ -231,6 +234,8 @@ python memory/经验.py 最近 -n 5
 set LAYERED_MEMORY_HOME=E:\somewhere\layered-memory
 python E:\somewhere\layered-memory\memory\检索.py 咖啡
 ```
+
+另一个开关是记账：`LAYERED_MEMORY_RECORD=0` 时 `search()` 只打分、不写 `使用记录.jsonl`（`记忆体检`、只比分数的地方该关掉它）。
 
 ## 插件：同义扩展（可选）
 
@@ -264,8 +269,8 @@ JSON 坏了、字段缺了、`groups` 里塞了非列表——一律当这个插
 1. **字面检索，不是语义检索**。中文按 2 字滑窗算重合，换个说法就空手，这是设计取舍不是 bug。真需要语义就接一层 embedding，但那就不是「纯文件」了。
 2. **并发锁只管单机**。同一台机器上多进程写同一个 md 已经安全（`memory/锁.py`：原子替换 + 系统级文件锁）；网络盘上 `flock` 语义不保证，跨机器同时写别指望它。
 3. **归档会删原行**，之后 `--verify` 会把它们报成「整条消失」。确认该删就用 `--adopt` 写一条处置记录。
-4. **权重不会自己涨**。`used: true` 要显式标（`python memory/记忆曲线.py --mark-used 关键词`），否则所有条目停在初始重要度，只剩时间衰减。
-5. **`使用记录.jsonl` 只增不减**，没有轮转，长期跑要自己按天切。
+4. **权重涨得慢，而且不许虚高**。`search()` 命中会自动记一条（`via: "search"`，按 0.5 折算，同 key 同日只留一行）；人显式确认过的按满值算（`python memory/记忆曲线.py --mark-used 关键词`，写的是没有 `via` 的老格式）。想安静打分就 `record=False` 或 `LAYERED_MEMORY_RECORD=0`。
+5. **`使用记录.jsonl` 基本只增不减**：没有轮转，只有「同 key 同日去重」这一道闸，长期跑要自己按天切。
 6. 中文 Windows 控制台要先 `chcp 65001`。
 
 ## License

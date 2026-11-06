@@ -72,7 +72,7 @@ class Base(unittest.TestCase):
         self.core = load_core(self.tmp, self.plugdir)
 
     def score(self, q, needle="头疼"):
-        for h in self.core.search(q, limit=5):
+        for h in self.core.search(q, limit=5, record=False):   # 纯打分对比，不记账
             if needle in h["text"]:
                 return round(h["score"], 4)
         return None
