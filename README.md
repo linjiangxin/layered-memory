@@ -179,6 +179,32 @@ def my_delegate(task: str) -> dict:
 
 `--fake 成|败|半` 是给测试和演示用的假子代理，别拿它判断真实世界的成败。
 
+## 接真模型（可选）
+
+**不设变量就是假代理，测试不需要网络。** 默认路径是 `memory/代理.py` 的 `make_delegate()`：`LAYERED_MEMORY_DELEGATE` 没设就返回假代理，行为和以前一模一样，一个字节都不发出去。
+
+要挂自己的端点，设三个变量（`URL` 必填，`KEY` 可选、走 `Authorization: Bearer`，`MODEL` 可选）：
+
+```bash
+export LAYERED_MEMORY_DELEGATE=http LAYERED_MEMORY_DELEGATE_URL="https://your-endpoint/v1/chat" LAYERED_MEMORY_DELEGATE_KEY="sk-xxxx"
+python loop.py "任务" --grep 关键词
+```
+
+```powershell
+$env:LAYERED_MEMORY_DELEGATE="http"; $env:LAYERED_MEMORY_DELEGATE_URL="https://your-endpoint/v1/chat"; $env:LAYERED_MEMORY_DELEGATE_KEY="sk-xxxx"
+python loop.py "任务" --grep 关键词
+```
+
+注意上面那条命令里的 `--grep 关键词` 是**本地搜索**（`--grep` 优先级高于环境变量，不调模型）；要让模型接这活，把 `--grep 关键词` 去掉：
+
+```bash
+python loop.py "任务"        # 有变量 → POST 你的端点；没变量 → 假代理
+```
+
+端点收到 `POST {"task": "...", "model": "..."}`，超时 30 秒。回包认三种形状：直接一条 `{"result": "成"|"败"|"半", "cause": ..., "loc": "file:line"}`；OpenAI 兼容的 `{"choices":[{"message":{"content":"<json 字符串>"}}]}`；或者 `{"content": "<json 字符串>"}`。解析不出来、字段不合法、网络炸了，统一回 `{"result": "败", "cause": "一句人话"}`，主循环照常落经验，不会被打断。
+
+优先级：`--fake` > `--grep` > 环境变量。密钥只进请求头，不落盘、不进日志；错误原因里的 URL 和 Bearer 先脱敏再写出来。
+
 ## 命令行怎么用
 
 ```bash

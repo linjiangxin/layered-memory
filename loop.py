@@ -24,7 +24,9 @@ delegate 就是一个普通函数，签名 delegate(task) -> dict，字段：
   grep_delegate(keyword, root)   零依赖、干真活：搜关键词，只回结论 + file:line，不吐原文
   fake_delegate(**kw)            假的，给测试和演示用
 
-想接真模型：自己写一个 delegate 调 API，把回传凑成上面那个 dict 就行，主循环一个字都不用改。
+想接真模型：走 memory/代理.py 的 make_delegate()。不设环境变量就是假代理（不联网、可测）；
+设 LAYERED_MEMORY_DELEGATE=http + URL / KEY，它就用 urllib.request POST 你的端点，
+回包自己收成上面那个 dict —— 主循环一个字都不用改。
 
 用法：
   python loop.py "在 memory 里找 split_status" --grep split_status --path memory
@@ -38,6 +40,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "memory"))
 import core    # noqa: E402
 import 经验    # noqa: E402
+import 代理    # noqa: E402
 
 TEXT_EXT = (".py", ".md", ".txt", ".json", ".jsonl", ".mjs", ".js", ".yml", ".yaml",
             ".toml", ".cfg", ".ini", ".ps1", ".sh", ".svg", ".html", ".css")
@@ -90,12 +93,11 @@ def _grep(keyword, root, limit, max_files):
 
 
 def fake_delegate(**kw):
-    """假的子代理：返回给定结论。给测试和演示用，别拿它判断真实世界的成败。"""
-    def _d(task):
-        out = {"result": "成", "path": "fake-delegate（演示用）", "conclusion": "跑通了"}
-        out.update({k: v for k, v in kw.items() if v})
-        return out
-    return _d
+    """假的子代理：返回给定结论。给测试和演示用，别拿它判断真实世界的成败。
+
+    真身在 代理.fake_delegate，这里留个同签名的名字给老调用方，行为一个字没变。
+    """
+    return 代理.fake_delegate(**kw)
 
 
 # ---- 主循环 --------------------------------------------------------------
@@ -136,7 +138,8 @@ def loop(task, delegate, *, dry=False, quiet=False):
 
 USAGE = """用法：
   python loop.py "任务描述" --grep 关键词 [--path 目录] [--dry]
-  python loop.py "任务描述" --fake 成|败|半   [--cause ...] [--dry]"""
+  python loop.py "任务描述" --fake 成|败|半   [--cause ...] [--dry]
+  python loop.py "任务描述"                  # 看 LAYERED_MEMORY_DELEGATE：不设 = 假代理"""
 
 
 def main(argv):
@@ -167,11 +170,18 @@ def main(argv):
 
     if not task:
         sys.exit(USAGE)
-    if not keyword and not fake:
-        sys.exit("要么 --grep 关键词，要么 --fake：不给的话这活儿派不出去。\n" + USAGE)
+    if not keyword and not fake and not 代理.已配():
+        sys.exit("要么 --grep 关键词，要么 --fake，要么配好 LAYERED_MEMORY_DELEGATE："
+                 "不给的话这活儿派不出去。\n" + USAGE)
 
-    delegate = (grep_delegate(keyword, root) if keyword
-                else fake_delegate(result=fake, cause=cause or ("演示用" if fake == "败" else "")))
+    # 优先级：--fake > --grep > 环境变量（不设 = 假代理）
+    if fake:
+        delegate = 代理.make_delegate(result=fake,
+                                       cause=cause or ("演示用" if fake == "败" else ""))
+    elif keyword:
+        delegate = grep_delegate(keyword, root)
+    else:
+        delegate = 代理.make_delegate()
     _old, out, _rec = loop(task, delegate, dry=dry)
     return 0      # 子代理败不等于主循环失败：败也是经验，照样落盘
 
