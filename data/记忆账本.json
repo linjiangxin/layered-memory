@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "created": "2026-11-06T11:30:57",
+  "entries": {
+    "a7c312dbabeca3dfc82fe4e95b9d5c4e15f957587431a0913edbff4f9a19d841": {
+      "sha256": "a7c312dbabeca3dfc82fe4e95b9d5c4e15f957587431a0913edbff4f9a19d841",
+      "len": 32,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：回答先给结论，再给理由；不确定的部分直接标出来，别猜。"
+    },
+    "c7fe0a78d70f5aa4f0f244aa8da1293625cbe0e827f501ea2293329c05b6ea36": {
+      "sha256": "c7fe0a78d70f5aa4f0f244aa8da1293625cbe0e827f501ea2293329c05b6ea36",
+      "len": 39,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：不主动催进度，不说「你该早点动手」；要提醒只问「今天打算做到几点」。"
+    },
+    "95dcfe072b709f21ad573c7a9a319382879b53d2eef3fb4d9629e74762f3ce46": {
+      "sha256": "95dcfe072b709f21ad573c7a9a319382879b53d2eef3fb4d9629e74762f3ce46",
+      "len": 35,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：动手改文件之前先说改哪一个、改完怎么验；改完立刻跑一次验证。"
+    },
+    "195981369b7a4dc7c9d1d09bb40ea0fca99807c9baf5ec323406c3f4f5f50148": {
+      "sha256": "195981369b7a4dc7c9d1d09bb40ea0fca99807c9baf5ec323406c3f4f5f50148",
+      "len": 27,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：他说「等一下」就是真的在忙，不要追问第二遍。"
+    },
+    "40c8640bf2ca2d87ca04631d83cafb99ba6727dc1df8fa96495ba87dbe3c04dd": {
+      "sha256": "40c8640bf2ca2d87ca04631d83cafb99ba6727dc1df8fa96495ba87dbe3c04dd",
+      "len": 30,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：写不出东西的时候先聊十分钟闲事，再回来写，不硬憋。"
+    },
+    "147830cfd928d0bc1d80a0e4ed5a847db428391a96e190ae81094df3df96ccbb": {
+      "sha256": "147830cfd928d0bc1d80a0e4ed5a847db428391a96e190ae81094df3df96ccbb",
+      "len": 31,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：分享链接要带一句「为什么给你看」，光甩链接不算分享。"
+    },
+    "aefd64971bf8c67be803b35db2c1ec9e7d75e33eef6deedf766917120801c192": {
+      "sha256": "aefd64971bf8c67be803b35db2c1ec9e7d75e33eef6deedf766917120801c192",
+      "len": 27,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：周末不排计划，留白；临时起意优先于原定安排。"
+    },
+    "e0fa2f66f77a34838f2a6bb56885e97c84970abe666e86c22beaf0c64a0d5d6e": {
+      "sha256": "e0fa2f66f77a34838f2a6bb56885e97c84970abe666e86c22beaf0c64a0d5d6e",
+      "len": 25,
+      "src": "长期/主题/关系与约定.md",
+      "text": "- 约定：争执之后先各自安静半小时，再由他先开口。"
+    },
+    "857ce9fc661711ba48e5cb125d5be99df9faadf5f911b888269036d436a351b3": {
+      "sha256": "857ce9fc661711ba48e5cb125d5be99df9faadf5f911b888269036d436a351b3",
+      "len": 27,
+      "src": "长期/主题/零碎见闻.md",
+      "text": "- 街角那家修表铺只在上午开门，门口摆一把掉漆的竹椅。"
+    },
+    "8d29636047d289c817f011f9426435764aeeefe91ee4d9f8901f079aae9d6c9f": {
+      "sha256": "8d29636047d289c817f011f9426435764aeeefe91ee4d9f8901f079aae9d6c9f",
+      "len": 27,
+      "src": "长期/主题/零碎见闻.md",
+      "text": "- 楼下便利店的关东煮到晚上十点会打折，萝卜最早卖光。"
+    },
+    "b838f22b10c72af7c94b11aa7a1b1123698db9930cd3c98778618e29917f4774": {
+      "sha256": "b838f22b10c72af7c94b11aa7a1b1123698db9930cd3c98778618e29917f4774",
+      "len": 34,
+      "src": "长期/主题/零碎见闻.md",
+      "text": "- 老体育馆的泳池是 25 米短池，来回 16 趟正好 800 米。"
+    },
+    "8adc602a0e9f83f200f3b61bd2abf3b96aa245bbd43562cdad78c9f514e2ff10": {
+      "sha256": "8adc602a0e9f83f200f3b61bd2abf3b96aa245bbd43562cdad78c9f514e2ff10",
+      "len": 27,
+      "src": "长期/主题/零碎见闻.md",
+      "text": "- 临川冬天的雾来得快，早上七点能见度常常不到五十米。"
+    },
+    "ce273119f32243ed56691d5c3178259a1018ca804422a5d76f0543ad1e22c9fd": {
+      "sha256": "ce273119f32243ed56691d5c3178259a1018ca804422a5d76f0543ad1e22c9fd",
+      "len": 27,
+      "src": "长期/主题/零碎见闻.md",
+      "text": "- 南屿河边那段步道新装了路灯，晚上八点以后人就少了。"
+    },
+    "5e8252d68fca78755cbd0e3fa4ecae4925f4cfc2ced9639d8ed36e7817aa98d1": {
+      "sha256": "5e8252d68fca78755cbd0e3fa4ecae4925f4cfc2ced9639d8ed36e7817aa98d1",
+      "len": 38,
+      "src": "长期/事实库.md",
+      "text": "- 称呼：用户昵称「阿舟」，助手直接叫他阿舟，不叫「亲」「老板」这类客套词。"
+    },
+    "b79c15e13c5551f8aca060318f54e2270a241ef1b1a1923dcc3fc76230d52e4c": {
+      "sha256": "b79c15e13c5551f8aca060318f54e2270a241ef1b1a1923dcc3fc76230d52e4c",
+      "len": 45,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟在一家做水族器材的小公司做排版，主力软件是 Affinity Publisher。"
+    },
+    "f6896207e9af5a77de5ded6ae42ab3540e89eb5c523ba7b4659d6d13c4f1c860": {
+      "sha256": "f6896207e9af5a77de5ded6ae42ab3540e89eb5c523ba7b4659d6d13c4f1c860",
+      "len": 40,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟用一台 2019 年的旧笔记本，开大文件会卡，习惯先关掉一排浏览器标签。"
+    },
+    "dba2367dfa346fc4d1fbea96ada90cb9b3a7f69c9e8b0dbbae382d3cb3806961": {
+      "sha256": "dba2367dfa346fc4d1fbea96ada90cb9b3a7f69c9e8b0dbbae382d3cb3806961",
+      "len": 29,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟记不住密码，用一本纸质本子记，放在书桌第二层抽屉。"
+    },
+    "427f6787378e922e3bfa461b484eafa696925a6ef6a33537dc874b59dd53e653": {
+      "sha256": "427f6787378e922e3bfa461b484eafa696925a6ef6a33537dc874b59dd53e653",
+      "len": 27,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟工作日九点半上班，八点二十出门，骑车二十分钟。"
+    },
+    "87fb7beeb1bfed5a2edd8ba5a0f3a53a48f116889395767513a4da6e4508170f": {
+      "sha256": "87fb7beeb1bfed5a2edd8ba5a0f3a53a48f116889395767513a4da6e4508170f",
+      "len": 48,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟 2026 年 10 月搬到了「南屿」，现在住在靠河的一间小公寓，通勤骑车也是二十分钟。"
+    },
+    "c546988c15de22d74145bc4ff2ede54772cffc5c4ffc507c48cf04dff50c8376": {
+      "sha256": "c546988c15de22d74145bc4ff2ede54772cffc5c4ffc507c48cf04dff50c8376",
+      "len": 26,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟对芒果过敏，误食会起疹子，家里常备氯雷他定。"
+    },
+    "dcc30d71be585cf482d355e6e4d073ec224ee407b03755b1fe3ab43021b49485": {
+      "sha256": "dcc30d71be585cf482d355e6e4d073ec224ee407b03755b1fe3ab43021b49485",
+      "len": 27,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟每周三晚上去老体育馆游泳，一般游 800 米。"
+    },
+    "0e6b0efcaf890d11352de6ddf245f6808424a894e13f8e38ad68c8e7835bcfeb": {
+      "sha256": "0e6b0efcaf890d11352de6ddf245f6808424a894e13f8e38ad68c8e7835bcfeb",
+      "len": 17,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟怕黑，睡前留一盏走廊小灯。"
+    },
+    "5ab3deaa731cc1e1cca52cb59ec27ad5360eadacc1571e5c7a281cd8eebbe7d7": {
+      "sha256": "5ab3deaa731cc1e1cca52cb59ec27ad5360eadacc1571e5c7a281cd8eebbe7d7",
+      "len": 33,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟的生日是 4 月 17 日，自己经常忘，日历里也没设提醒。"
+    },
+    "9b8cd57c7711460be498ce3bedb0f4dc06994c63a1feb19251da4b3f61c28134": {
+      "sha256": "9b8cd57c7711460be498ce3bedb0f4dc06994c63a1feb19251da4b3f61c28134",
+      "len": 27,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟早上六点半起，先烧水再洗脸，水开之前不看手机。"
+    },
+    "811cfa9d0cba61aac8d606963ab55c350e2ee1ed6fb09a3e6d8bd894522f5133": {
+      "sha256": "811cfa9d0cba61aac8d606963ab55c350e2ee1ed6fb09a3e6d8bd894522f5133",
+      "len": 28,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟的偏好：写东西时必须有背景白噪音，人声会打断他。"
+    },
+    "5b7f7833eefb72a4bc4022f19f2b0a2eaaec2e1b4b73971fe5a75e617565a24b": {
+      "sha256": "5b7f7833eefb72a4bc4022f19f2b0a2eaaec2e1b4b73971fe5a75e617565a24b",
+      "len": 35,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟的偏好：笔记一律用纯文本 Markdown，不用任何私有格式。"
+    },
+    "963559914191df59b5f349157c084d98851e19a1f735894e28ac056e6007935e": {
+      "sha256": "963559914191df59b5f349157c084d98851e19a1f735894e28ac056e6007935e",
+      "len": 26,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟的偏好：看纪录片不看解说版，宁可自己查资料。"
+    },
+    "9f893dcdf091626422a602ab8e807c39b2095992abe739aa6e188d0e0979b2f0": {
+      "sha256": "9f893dcdf091626422a602ab8e807c39b2095992abe739aa6e188d0e0979b2f0",
+      "len": 21,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟不喜欢开场寒暄，第一句就要有结论。"
+    },
+    "c05e3a5d21d8849bdd7672a5955f8fdef83cbfa5650cfe2f22ccd226556101f7": {
+      "sha256": "c05e3a5d21d8849bdd7672a5955f8fdef83cbfa5650cfe2f22ccd226556101f7",
+      "len": 30,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟不喜欢语音条，超过 20 秒一律不听，会直接转文字。"
+    },
+    "53a4b5b6dced902ed70455c3d1292edfba9115b70413de2c42bed149be3c0cae": {
+      "sha256": "53a4b5b6dced902ed70455c3d1292edfba9115b70413de2c42bed149be3c0cae",
+      "len": 21,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟讨厌香菜，点外卖必写「不要香菜」。"
+    },
+    "d0074d8b151be1f9369cb84d0223ffee55bfe930b60eed2bb75a2028a059671d": {
+      "sha256": "d0074d8b151be1f9369cb84d0223ffee55bfe930b60eed2bb75a2028a059671d",
+      "len": 31,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟一天两杯咖啡，第二杯一定在下午三点前喝完，晚了会失眠。"
+    },
+    "90bf2dfbd12275cd53ee6d3bf044338b93bc127103178f0f26e7cd1d3613e297": {
+      "sha256": "90bf2dfbd12275cd53ee6d3bf044338b93bc127103178f0f26e7cd1d3613e297",
+      "len": 27,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟说话直接，讨厌绕圈子；被反问「你觉得呢」会烦。"
+    },
+    "2108ee23b571c7a8ee7e12c1d3809f17409cf99a8e326017c6df917aa29cb5a4": {
+      "sha256": "2108ee23b571c7a8ee7e12c1d3809f17409cf99a8e326017c6df917aa29cb5a4",
+      "len": 28,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟养了一只三花猫叫「团子」，怕吹风机，只肯吃冻干。"
+    },
+    "35ccf0f7a12ac511278cff8f640164e218e740b2cd0c14b1811142dc93b4e402": {
+      "sha256": "35ccf0f7a12ac511278cff8f640164e218e740b2cd0c14b1811142dc93b4e402",
+      "len": 28,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟有个旧铁盒装票根，看过的电影票都留着，按年份分。"
+    },
+    "3214ff3c603f8fb04dec1c1aa2d0bfc14b8b10d0b97bfe39d957a7277374abb8": {
+      "sha256": "3214ff3c603f8fb04dec1c1aa2d0bfc14b8b10d0b97bfe39d957a7277374abb8",
+      "len": 23,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟记账用一张表格，每月最后一天对一次账。"
+    },
+    "71ce7cbe371acd03283d889bd23d37f131e0078e483f01ed7e2365228e8f138e": {
+      "sha256": "71ce7cbe371acd03283d889bd23d37f131e0078e483f01ed7e2365228e8f138e",
+      "len": 27,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟的旧 Kindle 只装小说，睡前只看纸质书。"
+    },
+    "2ec379050730631a165bcfe89149934829ae8062a9c8a3e3098a23174f59b0c9": {
+      "sha256": "2ec379050730631a165bcfe89149934829ae8062a9c8a3e3098a23174f59b0c9",
+      "len": 33,
+      "src": "长期/事实库.md",
+      "text": "- 阿舟住在一座虚构的小城「临川」，冬天风大，出门总带一条灰围巾。"
+    }
+  }
+}

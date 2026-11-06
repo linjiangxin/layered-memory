@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-label="分层记忆数据流：对话召回注入，日记固化进长期库，作废标记旧条目">
+  <title>分层记忆 · 数据流</title>
+  <desc>上半部分：对话 → 召回(search) → 注入 prompt。下半部分：日记 → 固化 → 长期库 → 检索，检索结果回到召回。作废(deprecate) 从长期库右侧插入，把旧条目变成 deprecated（虚线）。</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#7c8a82"/>
+    </marker>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2f6f57"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="600" fill="#fbfbfa"/>
+
+  <text x="60" y="54" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="#2b2f2d">分层记忆：一条记忆怎么进、怎么出</text>
+  <text x="60" y="78" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#8a938d">纯文件 · 不要数据库 · 检索靠字面重合 × 遗忘曲线 × 重要度</text>
+
+  <!-- ================= 上半：使用链路 ================= -->
+
+  <rect x="60" y="100" width="180" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="150" y="136" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2b2f2d">对话</text>
+  <text x="150" y="160" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">用户这一句</text>
+
+  <rect x="340" y="100" width="200" height="88" rx="12" fill="#ffffff" stroke="#2f6f57" stroke-width="1.8"/>
+  <text x="440" y="136" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2f6f57">召回 search</text>
+  <text x="440" y="160" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">打分、取前 3 条</text>
+
+  <rect x="640" y="100" width="220" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="750" y="136" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2b2f2d">注入 prompt</text>
+  <text x="750" y="160" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">「你记得的一些事，只作参考」</text>
+
+  <line x1="240" y1="144" x2="334" y2="144" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="287" y="132" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">这句话</text>
+  <line x1="540" y1="144" x2="634" y2="144" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="587" y="132" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">前 3 条</text>
+
+  <!-- ================= 下半：沉淀链路 ================= -->
+
+  <rect x="60" y="360" width="150" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="135" y="396" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2b2f2d">日记</text>
+  <text x="135" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">一天一篇 · 一节一条</text>
+
+  <rect x="300" y="360" width="150" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="375" y="396" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2b2f2d">固化</text>
+  <text x="375" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">去掉重复 · 列候选</text>
+
+  <rect x="520" y="360" width="180" height="88" rx="12" fill="#ffffff" stroke="#2f6f57" stroke-width="1.8"/>
+  <text x="610" y="396" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2f6f57">长期库</text>
+  <text x="610" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">事实库 · 主题 · 一行一条</text>
+
+  <rect x="790" y="360" width="150" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="865" y="396" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#2b2f2d">检索</text>
+  <text x="865" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">跳过作废条目</text>
+
+  <line x1="210" y1="404" x2="294" y2="404" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="252" y="392" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">最近 7 天</text>
+  <line x1="450" y1="404" x2="514" y2="404" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="482" y="392" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">不重复的</text>
+  <line x1="700" y1="404" x2="784" y2="404" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="742" y="392" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">按关键词</text>
+
+  <!-- 检索 → 召回 -->
+  <path d="M 865 360 L 865 220 L 440 220 L 440 192" fill="none" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="652" y="240" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">打分结果回到召回</text>
+
+  <!-- ================= 作废：从侧边插入 ================= -->
+
+  <rect x="965" y="360" width="195" height="88" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="1062" y="392" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">作废 deprecate</text>
+  <text x="1062" y="416" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">只加标记，不改正文</text>
+
+  <path d="M 1062 448 L 1062 486 L 662 486 L 662 452" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <text x="860" y="506" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#2f6f57">行尾挂 status: deprecated</text>
+
+  <rect x="520" y="496" width="180" height="64" rx="12" fill="#ffffff" stroke="#2f6f57" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="610" y="524" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#2f6f57">旧条目（deprecated）</text>
+  <text x="610" y="544" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">还在文件里，默认召回不到</text>
+
+  <line x1="610" y1="448" x2="610" y2="492" stroke="#2f6f57" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#arrow-accent)"/>
+
+  <!-- 图例 -->
+  <line x1="60" y1="562" x2="106" y2="562" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="116" y="566" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">读写数据流</text>
+  <line x1="240" y1="562" x2="286" y2="562" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <text x="296" y="566" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#8a938d">作废 / 失效路径</text>
+</svg>

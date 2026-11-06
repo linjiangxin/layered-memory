@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.bak-*
+node_modules/
+.env
+.DS_Store
+Thumbs.db
+data/使用记录.jsonl
+data/健康.log
+tests/__pycache__/
