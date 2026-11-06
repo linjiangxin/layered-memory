@@ -90,7 +90,11 @@ def load():
     if not LEDGER.exists():
         return {"version": 1, "created": None, "entries": {}}
     try:
-        data = json.loads(LEDGER.read_text(encoding="utf-8").replace("\ufeff", ""))
+        # 账本随时可能被别的进程 os.replace 换掉：读侧退避，别把 WinError 5 当「账本坏了」
+        data = json.loads(锁.read_bytes(str(LEDGER), errors="replace").replace("\ufeff", ""))
+    except 锁.ReadTimeout as e:
+        print(f"❌ 账本读不出来（一直被占用）：{e}")
+        sys.exit(2)
     except Exception as e:
         print(f"❌ 账本读不出来（JSON 坏了）：{e}")
         sys.exit(2)
@@ -131,7 +135,8 @@ def cmd_sync(data):
 
 def _read_text(path):
     try:
-        return path.read_text(encoding="utf-8", errors="replace")
+        # 扫描的 md 也在被 atomic_write 替换：读侧退避，宁愿多等一瞬也不误报「丢了」
+        return 锁.read_bytes(str(path), timeout=2.0, errors="replace")
     except Exception:
         return None
 

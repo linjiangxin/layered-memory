@@ -14,7 +14,10 @@ LAYERED_MEMORY_HOME / MEM_LEDGER 都指向那儿，真实 data/ 一个字节都�
   4. 拿着锁的进程直接死掉 → 后来者照样能拿到（系统级锁随 fd 关闭释放）
   5. core.add 走的是同一套锁：8 个线程并发写同一个 md 不丢条目
   6. rewriting 只读不写 → 不落盘、不动 mtime
+  7. Windows 上目标被占用（WinError 5）→ os.replace 退避重试、超时抛错并清临时文件；
+     非「被占用」类错误一次都不重试；read_bytes / read_json 同样带退避、坏 JSON 只告警
 """
+import contextlib
 import importlib.util
 import io
 import os
@@ -26,6 +29,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "memory"))
@@ -201,6 +205,132 @@ class 并发安全(unittest.TestCase):
             self.assertEqual(doc.text, "原样一行\n")
             self.assertEqual(doc.lines(), ["原样一行\n"])
         self.assertEqual(p.stat().st_mtime_ns, before)   # 没赋值 → 不写盘、不动 mtime
+
+
+class 替换退避与读侧(unittest.TestCase):
+    """Windows 上目标文件正被别的进程 open 着时 os.replace 会 WinError 5。
+
+    这里把「拒绝访问」造出来，钉住四件事：退避后能成功、超时要抛且清临时文件、
+    非「被占用」类错误一次都不重试、读侧（read_bytes / read_json）同样不崩。
+    超时一律压到 0.05s，别为了测退避把整套测试拖慢。
+    """
+
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp()
+        self.home = Path(self._tmp)
+
+    def tearDown(self):
+        shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def _leftovers(self):
+        return [n for n in os.listdir(self._tmp) if n.startswith(锁.TMP_PREFIX)]
+
+    # ---- 7 ---------------------------------------------------------------
+    def test_替换前两次拒绝访问第三次成功(self):
+        p = self.home / "被占.md"
+        real = os.replace
+        calls = {"n": 0}
+
+        def flaky(src, dst):
+            calls["n"] += 1
+            if calls["n"] <= 2:
+                raise PermissionError(5, "拒绝访问")   # WinError 5 的形状
+            return real(src, dst)
+
+        with mock.patch.object(锁.os, "replace", flaky):
+            锁.atomic_write(str(p), "第三次才写进去\n", timeout=2.0)
+
+        self.assertEqual(calls["n"], 3)                # 真退避了，不是一次就放弃
+        self.assertEqual(p.read_text(encoding="utf-8"), "第三次才写进去\n")
+        self.assertEqual(self._leftovers(), [])        # 成功路径也不留垃圾
+
+    # ---- 8 ---------------------------------------------------------------
+    def test_替换一直拒绝访问超时抛错且清掉临时文件(self):
+        p = self.home / "一直占着.md"
+        calls = {"n": 0}
+
+        def always(src, dst):
+            calls["n"] += 1
+            raise PermissionError(5, "拒绝访问")
+
+        began = time.monotonic()
+        with mock.patch.object(锁.os, "replace", always):
+            with self.assertRaises(PermissionError):
+                锁.atomic_write(str(p), "写不进去\n", timeout=0.05)
+        cost = time.monotonic() - began
+
+        self.assertGreaterEqual(calls["n"], 2)         # 预算内反复试过
+        self.assertLess(cost, 1.0)                     # 到点就抛，不磨到底
+        self.assertGreaterEqual(cost, 0.04)            # 确实等了，不是立刻抛
+        self.assertFalse(p.exists())                   # 目标没被写坏
+        self.assertEqual(self._leftovers(), [])        # 半成品清干净
+
+    # ---- 9 ---------------------------------------------------------------
+    def test_非目标错误立即抛不重试(self):
+        p = self.home / "是目录.md"
+        calls = {"n": 0}
+
+        def boom(src, dst):
+            calls["n"] += 1
+            raise IsADirectoryError(21, "Is a directory")   # 不是「被占用」
+
+        with mock.patch.object(锁.os, "replace", boom):
+            with self.assertRaises(IsADirectoryError):
+                锁.atomic_write(str(p), "x\n", timeout=5.0)
+
+        self.assertEqual(calls["n"], 1)                # 一次都不多试
+        self.assertEqual(self._leftovers(), [])
+
+    # ---- 10 --------------------------------------------------------------
+    def test_读遇拒绝访问重试后成功(self):
+        p = self.home / "读.md"
+        p.write_bytes("换到一半的另一半\n".encode("utf-8"))
+        real_open = io.open
+        calls = {"n": 0}
+
+        def flaky(*a, **kw):
+            calls["n"] += 1
+            if calls["n"] <= 2:
+                raise PermissionError(5, "拒绝访问")
+            return real_open(*a, **kw)
+
+        with mock.patch.object(锁.io, "open", flaky):
+            text = 锁.read_bytes(str(p), timeout=2.0)
+
+        self.assertEqual(text, "换到一半的另一半\n")
+        self.assertEqual(calls["n"], 3)
+
+    def test_读一直被占用超时抛ReadTimeout(self):
+        p = self.home / "读不到.md"
+        p.write_bytes(b"x\n")
+
+        def always(*a, **kw):
+            raise PermissionError(5, "拒绝访问")
+
+        began = time.monotonic()
+        with mock.patch.object(锁.io, "open", always):
+            with self.assertRaises(锁.ReadTimeout):
+                锁.read_bytes(str(p), timeout=0.05)
+
+        self.assertLess(time.monotonic() - began, 1.0)
+        self.assertTrue(issubclass(锁.ReadTimeout, 锁.LockTimeout))
+
+    # ---- 11 --------------------------------------------------------------
+    def test_read_json_文件不存在返回默认值(self):
+        missing = str(self.home / "没有.json")
+        self.assertIsNone(锁.read_json(missing))
+        self.assertEqual(锁.read_json(missing, default={"a": 1}), {"a": 1})
+
+    def test_read_json_坏掉只告警不抛(self):
+        p = self.home / "坏.json"
+        p.write_bytes('{"半截": '.encode("utf-8"))     # 写到一半的 JSON
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            got = 锁.read_json(str(p), default={"兜底": True})
+
+        self.assertEqual(got, {"兜底": True})
+        self.assertIn("[WARN]", err.getvalue())
+        self.assertIn("JSON", err.getvalue())
 
 
 if __name__ == "__main__":

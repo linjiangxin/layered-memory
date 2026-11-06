@@ -18,6 +18,10 @@
       把「读 — 改 — 写」整段包起来：持锁 → 读全文 → yield 一个 doc → 原子写回。
       doc.text 是正文；只有你给它赋过值才会写盘（纯读不落盘、不产临时文件）。
 
+  read_bytes(path, timeout=5.0) / read_json(path, default=None, timeout=5.0)
+      读侧同样带退避：写的人正在 os.replace 那一瞬，Windows 会把目标短暂锁成
+      EACCES。read_json 读到坏 JSON 只打一条 WARN 到 stderr 并返回 default，不抛。
+
 用法：
     import 锁
     锁.atomic_write("a.md", "整篇新内容\\n")
@@ -35,9 +39,12 @@
   * __pycache__ 之类不锁：那是解释器自己写，锁了也没用。
 """
 import contextlib
+import errno
 import io
+import json
 import os
 import random
+import sys
 import time
 
 if os.name == "nt":                                  # pragma: no cover - 平台分支
@@ -45,13 +52,22 @@ if os.name == "nt":                                  # pragma: no cover - 平台
 else:                                                 # pragma: no cover
     import fcntl
 
-__all__ = ["LockTimeout", "atomic_write", "locked", "rewriting", "lock_path",
-           "DEFAULT_TIMEOUT", "TMP_PREFIX"]
+__all__ = ["LockTimeout", "ReadTimeout", "atomic_write", "locked", "rewriting",
+           "lock_path", "read_bytes", "read_json",
+           "DEFAULT_TIMEOUT", "REPLACE_TIMEOUT", "TMP_PREFIX"]
 
 DEFAULT_TIMEOUT = 5.0     # 秒
+REPLACE_TIMEOUT = 5.0     # os.replace / 读文件撞上「被占用」时的退避总预算（秒）
 TMP_PREFIX = ".tmp-"
 LOCK_SUFFIX = ".lock"
 POLL_MIN, POLL_MAX = 0.002, 0.05
+
+# os.replace 撞上「目标正被另一个进程 open 着」时，Windows 报的就是这几个码。
+# WinError 5 = 拒绝访问（ERROR_ACCESS_DENIED），32/33 = 共享冲突/锁冲突；
+# 落到 errno 上是 EACCES / EPERM。别的错误码一概不重试。
+RETRY_WINERRORS = (5, 32, 33)
+RETRY_ERRNOS = (errno.EACCES, errno.EPERM)
+BACKOFF_MIN, BACKOFF_MAX = 0.01, 0.05
 
 
 class LockTimeout(TimeoutError):
@@ -61,6 +77,31 @@ class LockTimeout(TimeoutError):
         self.path = path
         self.timeout = timeout
         super().__init__("等锁超时：%s（%.2f 秒）" % (path, timeout))
+
+
+class ReadTimeout(LockTimeout):
+    """读超时：目标文件一直被别人的 os.replace 占着，退避预算用尽。
+
+    故意挂在 LockTimeout 下面 —— 读写两条路超时，`except 锁.LockTimeout` 一次接住；
+    但它不是「等锁」，所以文案单独写。
+    """
+
+    def __init__(self, path, timeout):
+        TimeoutError.__init__(self, "读超时：%s（%.2f 秒）" % (path, timeout))
+        self.path = path
+        self.timeout = timeout
+
+
+def _retryable(exc):
+    """这个 OSError 是不是「文件正被别人占着」——只有这几种才退避重试。
+
+    IsADirectoryError（EISDIR）、ENOENT、ENOSPC 之类都是真错误，立刻抛。
+    """
+    if isinstance(exc, PermissionError):
+        return True
+    if getattr(exc, "winerror", None) in RETRY_WINERRORS:
+        return True
+    return getattr(exc, "errno", None) in RETRY_ERRNOS
 
 
 def lock_path(path):
@@ -73,8 +114,37 @@ def _tmp_name(directory):
                                                   random.getrandbits(32)))
 
 
-def atomic_write(path, data, encoding="utf-8"):
-    """整篇原子替换。data 是 str。返回写入的字节数（按编码后算）。"""
+def _replace(tmp, path, timeout=REPLACE_TIMEOUT):
+    """os.replace 的 Windows 加固版：目标被占用时短退避重试到 timeout。
+
+    Windows 上目标文件只要被另一个进程以「不带 FILE_SHARE_DELETE」的方式开着
+    （Python 的 open() / json.load() / 记事本都是），MoveFileEx 会直接
+    `PermissionError: [WinError 5] 拒绝访问`。读的人通常只开一瞬，退避一下就好；
+    POSIX 上 os.replace 本来就原子且不怕并发读，第一次就过。
+    非「被占用」类错误立刻抛，不吞。
+    """
+    deadline = time.monotonic() + float(timeout)
+    wait = BACKOFF_MIN
+    while True:
+        try:
+            os.replace(tmp, path)
+            return
+        except OSError as e:
+            if not _retryable(e):
+                raise
+            if os.path.isdir(path):                  # 目标是目录：等多久都变不成文件
+                raise
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(wait)                         # 不忙等，让持有人把句柄关掉
+            wait = min(BACKOFF_MAX, wait * 1.5)
+
+
+def atomic_write(path, data, encoding="utf-8", timeout=REPLACE_TIMEOUT):
+    """整篇原子替换。data 是 str。返回写入的字节数（按编码后算）。
+
+    timeout 是 os.replace 撞上「目标被占用」时的退避总预算（默认 REPLACE_TIMEOUT）。
+    """
     path = os.path.abspath(os.fspath(path))
     directory = os.path.dirname(path)
     if directory:
@@ -90,7 +160,7 @@ def atomic_write(path, data, encoding="utf-8"):
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)                        # 同一分区内是原子的
+        _replace(tmp, path, timeout=timeout)         # 同一分区内是原子的（带退避）
         tmp = None
     finally:
         if fd is not None:                           # io.open 之前就炸了
@@ -197,6 +267,52 @@ class _Doc(object):
 
     def __len__(self):
         return len(self._text)
+
+
+def read_bytes(path, timeout=DEFAULT_TIMEOUT, encoding="utf-8", errors=None):
+    """读全文（带退避重试），返回解码后的 str。
+
+    写的人正好在 os.replace 那一瞬，Windows 会把目标短暂锁成 EACCES ——
+    那不是半截数据，是「正在换」，`time.sleep` 一下再读就好。超过 timeout 抛
+    ReadTimeout；文件不存在抛 FileNotFoundError（缺文件由调用方自己决定怎么算）。
+    """
+    path = os.path.abspath(os.fspath(path))
+    deadline = time.monotonic() + float(timeout)
+    wait = BACKOFF_MIN
+    while True:
+        try:
+            with io.open(path, "r", encoding=encoding, errors=errors,
+                         newline="") as f:
+                return f.read()
+        except OSError as e:
+            if not _retryable(e):
+                raise                                # 不存在 / 是目录 / 权限真不对
+            if time.monotonic() >= deadline:
+                raise ReadTimeout(path, timeout)
+            time.sleep(wait)
+            wait = min(BACKOFF_MAX, wait * 1.5)
+
+
+def read_json(path, default=None, timeout=DEFAULT_TIMEOUT, encoding="utf-8"):
+    """读一份会被并发替换的 JSON：不存在 → default；坏 JSON → default + WARN。
+
+    坏 JSON 不抛 —— 记忆权重 / 账本这类文件，读到半截就抛会把整条检索链带崩；
+    按插件层的风格打一条 WARN 到 stderr，调用方拿默认值继续跑。
+    """
+    try:
+        text = read_bytes(path, timeout=timeout, encoding=encoding, errors="replace")
+    except FileNotFoundError:
+        return default
+    except (OSError, TimeoutError) as e:             # 超时 / 真读不动
+        print("[WARN] %s: 读不出来（%s），按默认值处理" % (path, e), file=sys.stderr)
+        return default
+    if not text.strip():
+        return default
+    try:
+        return json.loads(text.replace("\ufeff", ""))
+    except ValueError as e:
+        print("[WARN] %s: JSON 坏了（%s），按默认值处理" % (path, e), file=sys.stderr)
+        return default
 
 
 def _read_text(path, encoding):

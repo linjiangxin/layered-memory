@@ -151,8 +151,8 @@ def expand_query(query, plugin=None):
 
 def load_weights():
     if os.path.exists(WEIGHTS):
-        with io.open(WEIGHTS, "r", encoding="utf-8") as f:
-            return json.load(f)
+        # 权重文件每一轮都可能被别的进程原子替换：读到坏 JSON 走 WARN + {}，不崩
+        return 锁.read_json(WEIGHTS, default={}) or {}
     return {}
 
 
@@ -275,28 +275,27 @@ def load_usage():
     if not os.path.exists(USE_LOG):
         return out
     try:
-        f = io.open(USE_LOG, "r", encoding="utf-8", errors="replace")
-    except Exception:
-        return out
-    with f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                r = json.loads(line)
-            except Exception:
-                continue
-            if not r.get("used"):
-                continue
-            sha = str(r.get("sha") or "")[:16]
-            if not sha:
-                continue
-            d = out.setdefault(sha, {"used": 0, "last_used": None})
-            d["used"] += use_weight(r)     # 人确认的算满，检索命中的按 weight 折
-            ts = str(r.get("at") or r.get("ts") or "")[:10]
-            if ts and (d["last_used"] is None or ts > d["last_used"]):
-                d["last_used"] = ts
+        text = 锁.read_bytes(USE_LOG, errors="replace")
+    except (OSError, TimeoutError):
+        return out                                  # 缺文件 / 一直被占用：当 0 次用
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        if not r.get("used"):
+            continue
+        sha = str(r.get("sha") or "")[:16]
+        if not sha:
+            continue
+        d = out.setdefault(sha, {"used": 0, "last_used": None})
+        d["used"] += use_weight(r)     # 人确认的算满，检索命中的按 weight 折
+        ts = str(r.get("at") or r.get("ts") or "")[:10]
+        if ts and (d["last_used"] is None or ts > d["last_used"]):
+            d["last_used"] = ts
     return out
 
 

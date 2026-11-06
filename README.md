@@ -138,6 +138,8 @@ import 经验
 - **锁是系统级文件锁，不是拿文件存在与否当占位**。`locked(path, timeout=5.0)` 锁的是同目录的 `<文件名>.lock`：Windows 走 `msvcrt.locking(fd, LK_NBLCK, 1)`（文件至少 1 字节，空的话先写个 `\n`），POSIX 走 `fcntl.flock(fd, LOCK_EX)`。拿不到就轮询，超过 `timeout` 抛 `LockTimeout`（`TimeoutError` 的子类）。`finally` 一定解锁 + 关 fd —— 进程崩了由内核回收，锁不会烂在那儿。
 - **只包「读—改—写」**。`rewriting(path)` = 持锁 → 读全文 → `doc.text` → 原子写回；没赋值就不落盘、不产临时文件。`core.add` / `core.deprecate` / `经验.record` / `记忆账本.py --sync` 都走这条路。
 - 锁只影响**写**。读不拿锁（靠 `os.replace` 的原子性），所以检索永远不会被正在写的人堵住。
+- **Windows 上 `os.replace` 会被「占用」顶回来**。目标文件正被另一个进程 `open` 着时，Windows 直接抛 `PermissionError: [WinError 5] 拒绝访问`（并发写必撞）。`atomic_write` 现在短退避重试：`0.01s` 起、指数退避到 `0.05s` 封顶，总预算 `REPLACE_TIMEOUT = 5.0` 秒（`atomic_write(path, data, timeout=...)` 可覆盖），超出才抛原异常；`EACCES` / `EPERM` 以外的错误（比如目标是目录）一次都不重试，临时文件照旧清掉。
+- **读侧也给了一手**。`锁.read_bytes(path, timeout=5.0)` / `锁.read_json(path, default=None, timeout=5.0)`：别人正在 replace 那一瞬读也会短暂 `EACCES`，同样退避重试，超时抛 `ReadTimeout`（`LockTimeout` 的子类）；`read_json` 读到坏 JSON 只往 stderr 打一条 `[WARN]` 并返回默认值，不把检索链带崩。
 
 三条纪律：
 
