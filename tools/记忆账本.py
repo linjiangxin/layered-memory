@@ -30,6 +30,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# memory/锁.py：原子写 + 系统级文件锁（账本也是会被并发读—改—写的一份 JSON）
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "memory"))
+import 锁  # noqa: E402
+
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -96,7 +100,8 @@ def load():
 
 def save(data):
     LEDGER.parent.mkdir(parents=True, exist_ok=True)
-    LEDGER.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 原子替换：别人要么读到旧账本，要么读到新账本，不会读到写了一半的 JSON
+    锁.atomic_write(str(LEDGER), json.dumps(data, ensure_ascii=False, indent=1))
 
 
 def cmd_init(data):
@@ -112,12 +117,15 @@ def cmd_init(data):
 
 
 def cmd_sync(data):
-    current = harvest()
-    added = sum(1 for d in current if d not in data["entries"])
-    for digest, info in current.items():
-        if digest not in data["entries"]:
-            data["entries"][digest] = {"sha256": digest, **info}
-    save(data)
+    # 持锁重读：不要拿着启动时那份旧账本，把别人刚 sync 进去的条目盖掉
+    with 锁.locked(str(LEDGER)):
+        data = load()
+        current = harvest()
+        added = sum(1 for d in current if d not in data["entries"])
+        for digest, info in current.items():
+            if digest not in data["entries"]:
+                data["entries"][digest] = {"sha256": digest, **info}
+        save(data)
     print(f"✅ 同步完成：新入账 {added} 条，账本共 {len(data['entries'])} 条")
 
 

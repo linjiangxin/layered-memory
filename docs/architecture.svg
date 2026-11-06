@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="860" viewBox="0 0 1000 860" role="img" aria-label="分层记忆：记忆层负责记和查，编排层负责查经验、派子代理、落经验，子代理的中间过程不进主上下文；检索打分那一步可选挂同义扩展插件">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="950" viewBox="0 0 1000 950" role="img" aria-label="分层记忆：记忆层负责记和查，编排层负责查经验、派子代理、落经验，子代理的中间过程不进主上下文；检索打分那一步可选挂同义扩展插件；写路径旁边是可选的并发锁（原子替换 + 文件锁，只包读—改—写）">
   <title>分层记忆 · 两层数据流</title>
-  <desc>上半是记忆层：对话 → 召回 → 注入 prompt；日记 → 固化 → 长期库（事实库、主题、索引、经验）→ 检索打分，结果回到召回；作废给旧条目挂标记。检索打分下方挂着一个虚线框的可选插件「同义扩展」：只扩大命中集合、不改查询文本，命中按 0.7 折，关掉即回原字面逻辑。下半是编排层：主循环 loop.py → ① 查经验（memory/经验.py lookup）→ ② 派子代理（隔离环境，delegate(task)）→ ③ 落经验（写回 长期/经验.md）。子代理往下那条虚线被截断，标注 intermediate steps 不进主上下文，回来的只有结论和 file:line。</desc>
+  <desc>上半是记忆层：对话 → 召回 → 注入 prompt；日记 → 固化 → 长期库（事实库、主题、索引、经验）→ 检索打分，结果回到召回；作废给旧条目挂标记。写路径旁边一个虚线框「并发 · 锁」：memory/锁.py 先原子替换（临时文件 → os.replace）再上 msvcrt / fcntl 系统级文件锁，只包读—改—写。检索打分下方挂着一个虚线框的可选插件「同义扩展」：只扩大命中集合、不改查询文本，命中按 0.7 折，关掉即回原字面逻辑。下半是编排层：主循环 loop.py → ① 查经验（memory/经验.py lookup）→ ② 派子代理（隔离环境，delegate(task)）→ ③ 落经验（写回 长期/经验.md）。子代理往下那条虚线被截断，标注 intermediate steps 不进主上下文，回来的只有结论和 file:line。</desc>
 
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -14,7 +14,7 @@
     </marker>
   </defs>
 
-  <rect x="0" y="0" width="1000" height="860" fill="#fbfbfa"/>
+  <rect x="0" y="0" width="1000" height="950" fill="#fbfbfa"/>
 
   <!-- ================= 标题 ================= -->
   <text x="48" y="50" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="20" font-weight="600" fill="#2b2f2d">分层记忆：两层——一个记忆库，一个主循环</text>
@@ -22,7 +22,7 @@
   <line x1="48" y1="86" x2="952" y2="86" stroke="#e5e8e5" stroke-width="1"/>
 
   <!-- ================= 第一层：记忆层 ================= -->
-  <rect x="36" y="96" width="928" height="348" rx="16" fill="#f3f6f4"/>
+  <rect x="36" y="96" width="928" height="460" rx="16" fill="#f3f6f4"/>
   <text x="54" y="118" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12.5" font-weight="600" fill="#2f6f57">第一层 · 记忆层：记和查</text>
   <text x="946" y="118" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">一条记忆怎么进、怎么出</text>
 
@@ -91,68 +91,79 @@
   <text x="74" y="386" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">可选：插件只告诉检索「这些词也算命中」，查询本身一个字不改；</text>
   <text x="74" y="406" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">命中按 weight 折（缺省 0.7），分母仍是原查询长度；关掉即回字面逻辑。</text>
 
+  <!-- 可选：并发 · 锁（虚线圆角框 = 可选组件；只包读—改—写，读靠原子替换） -->
+  <rect x="546" y="446" width="260" height="100" rx="12" fill="#ffffff" stroke="#7c8a82" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="566" y="470" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="13.5" font-weight="600" fill="#2f6f57">并发 · 锁</text>
+  <text x="566" y="488" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="10.5" fill="#8a938d">memory/锁.py</text>
+  <text x="566" y="506" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">atomic_write：临时文件 → os.replace</text>
+  <text x="566" y="522" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">locked：msvcrt / fcntl，超时 5s</text>
+  <text x="566" y="538" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#4b5550">只包读—改—写</text>
+
+  <path d="M 546 496 L 520 496 L 520 338" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <text x="528" y="440" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">可选</text>
+
   <!-- ================= 第二层：编排层 ================= -->
-  <rect x="36" y="456" width="928" height="300" rx="16" fill="#f7f5f1"/>
-  <text x="54" y="482" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12.5" font-weight="600" fill="#2f6f57">第二层 · 编排层：怎么用</text>
-  <text x="946" y="482" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">只把结论收回来</text>
+  <rect x="36" y="568" width="928" height="300" rx="16" fill="#f7f5f1"/>
+  <text x="54" y="594" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12.5" font-weight="600" fill="#2f6f57">第二层 · 编排层：怎么用</text>
+  <text x="946" y="594" text-anchor="end" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">只把结论收回来</text>
 
-  <rect x="54" y="500" width="158" height="86" rx="12" fill="#ffffff" stroke="#2f6f57" stroke-width="1.8"/>
-  <text x="133" y="532" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2f6f57">主循环 loop.py</text>
-  <text x="133" y="554" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">三步，不多加</text>
-  <text x="133" y="572" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">判断 + 验收</text>
+  <rect x="54" y="612" width="158" height="86" rx="12" fill="#ffffff" stroke="#2f6f57" stroke-width="1.8"/>
+  <text x="133" y="644" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2f6f57">主循环 loop.py</text>
+  <text x="133" y="666" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">三步，不多加</text>
+  <text x="133" y="684" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">判断 + 验收</text>
 
-  <rect x="246" y="500" width="178" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
-  <text x="335" y="532" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">① 查经验</text>
-  <text x="335" y="554" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">经验.py lookup</text>
-  <text x="335" y="572" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">撞上「败」先看死因</text>
+  <rect x="246" y="612" width="178" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="335" y="644" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">① 查经验</text>
+  <text x="335" y="666" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">经验.py lookup</text>
+  <text x="335" y="684" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">撞上「败」先看死因</text>
 
-  <rect x="458" y="500" width="196" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
-  <text x="556" y="532" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">② 派子代理</text>
-  <text x="556" y="554" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">delegate(task) · 隔离环境</text>
-  <text x="556" y="572" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">回一条 dict</text>
+  <rect x="458" y="612" width="196" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="556" y="644" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">② 派子代理</text>
+  <text x="556" y="666" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">delegate(task) · 隔离环境</text>
+  <text x="556" y="684" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">回一条 dict</text>
 
-  <rect x="688" y="500" width="200" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
-  <text x="788" y="532" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">③ 落经验</text>
-  <text x="788" y="554" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">写回 长期/经验.md</text>
-  <text x="788" y="572" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">成 / 败 / 半 + 死因</text>
+  <rect x="688" y="612" width="200" height="86" rx="12" fill="#ffffff" stroke="#c9cfcb" stroke-width="1.5"/>
+  <text x="788" y="644" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="15" font-weight="600" fill="#2b2f2d">③ 落经验</text>
+  <text x="788" y="666" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">写回 长期/经验.md</text>
+  <text x="788" y="684" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">成 / 败 / 半 + 死因</text>
 
-  <line x1="212" y1="543" x2="240" y2="543" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="226" y="492" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">活儿</text>
-  <line x1="424" y1="543" x2="452" y2="543" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="438" y="492" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">先查</text>
-  <line x1="654" y1="543" x2="682" y2="543" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="668" y="492" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">结论</text>
+  <line x1="212" y1="655" x2="240" y2="655" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="226" y="604" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">活儿</text>
+  <line x1="424" y1="655" x2="452" y2="655" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="438" y="604" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">先查</text>
+  <line x1="654" y1="655" x2="682" y2="655" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="668" y="604" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#8a938d">结论</text>
 
   <!-- 编排层读写长期库 -->
-  <path d="M 479 332 L 479 472 L 335 472 L 335 492" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
-  <path d="M 479 332 L 479 472 L 788 472 L 788 492" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
-  <text x="398" y="464" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#2f6f57">读经验</text>
-  <text x="726" y="464" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#2f6f57">写经验</text>
+  <path d="M 479 332 L 479 584 L 335 584 L 335 604" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <path d="M 479 332 L 479 584 L 788 584 L 788 604" fill="none" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <text x="398" y="576" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#2f6f57">读经验</text>
+  <text x="726" y="576" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11" fill="#2f6f57">写经验</text>
 
-  <text x="74" y="624" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">主脑在这儿只做三件事：</text>
-  <text x="74" y="646" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">查过没有 · 派给谁 · 验收结论</text>
+  <text x="74" y="736" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">主脑在这儿只做三件事：</text>
+  <text x="74" y="758" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">查过没有 · 派给谁 · 验收结论</text>
 
   <!-- 子代理：被截断的中间过程 -->
-  <line x1="556" y1="586" x2="556" y2="614" stroke="#b0b8b2" stroke-width="1.5" stroke-dasharray="5 5"/>
-  <line x1="556" y1="630" x2="556" y2="652" stroke="#cdd3ce" stroke-width="1.5" stroke-dasharray="4 6"/>
-  <text x="568" y="627" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12" fill="#9aa39d">✂</text>
-  <text x="588" y="627" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">截断</text>
+  <line x1="556" y1="698" x2="556" y2="726" stroke="#b0b8b2" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <line x1="556" y1="742" x2="556" y2="764" stroke="#cdd3ce" stroke-width="1.5" stroke-dasharray="4 6"/>
+  <text x="568" y="739" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12" fill="#9aa39d">✂</text>
+  <text x="588" y="739" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">截断</text>
 
-  <rect x="416" y="656" width="280" height="86" rx="12" fill="#f0f1ef" stroke="#cdd3ce" stroke-width="1.3" stroke-dasharray="5 5"/>
-  <text x="556" y="684" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12" fill="#7c8a82">intermediate steps｜子代理内部</text>
-  <text x="556" y="704" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">读文件 · 试错 · 大段原文</text>
-  <text x="556" y="724" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">不进主上下文，只回结论 + file:line</text>
+  <rect x="416" y="768" width="280" height="86" rx="12" fill="#f0f1ef" stroke="#cdd3ce" stroke-width="1.3" stroke-dasharray="5 5"/>
+  <text x="556" y="796" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="12" fill="#7c8a82">intermediate steps｜子代理内部</text>
+  <text x="556" y="816" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">读文件 · 试错 · 大段原文</text>
+  <text x="556" y="836" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">不进主上下文，只回结论 + file:line</text>
 
   <!-- 脚注 -->
-  <text x="54" y="782" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">经验不写日记：日记过 14 天不进检索，经验越老越该在。派活门槛：要扫 3 个以上文件才起子代理。</text>
+  <text x="54" y="894" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">经验不写日记：日记过 14 天不进检索，经验越老越该在。派活门槛：要扫 3 个以上文件才起子代理。</text>
 
   <!-- 图例 -->
-  <line x1="54" y1="814" x2="100" y2="814" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="110" y="818" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">读写数据流</text>
-  <line x1="216" y1="814" x2="262" y2="814" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
-  <text x="272" y="818" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">作废 / 编排层读写经验</text>
-  <line x1="446" y1="814" x2="492" y2="814" stroke="#b0b8b2" stroke-width="1.5" stroke-dasharray="5 5"/>
-  <text x="502" y="818" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">被截断的中间过程</text>
-  <rect x="616" y="807" width="26" height="14" rx="4" fill="none" stroke="#7c8a82" stroke-width="1.5" stroke-dasharray="4 3"/>
-  <text x="652" y="818" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">虚线圆角框 = 可选插件</text>
+  <line x1="54" y1="926" x2="100" y2="926" stroke="#7c8a82" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="110" y="930" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">读写数据流</text>
+  <line x1="216" y1="926" x2="262" y2="926" stroke="#2f6f57" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#arrow-accent)"/>
+  <text x="272" y="930" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">作废 / 编排层读写经验</text>
+  <line x1="446" y1="926" x2="492" y2="926" stroke="#b0b8b2" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <text x="502" y="930" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#9aa39d">被截断的中间过程</text>
+  <rect x="616" y="919" width="26" height="14" rx="4" fill="none" stroke="#7c8a82" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="652" y="930" font-family="system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif" font-size="11.5" fill="#8a938d">虚线圆角框 = 可选组件</text>
 </svg>

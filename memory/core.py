@@ -23,6 +23,7 @@ memory\\检索.py 和 memory\\作废.py 现在都是这个文件的命令行薄�
 import io
 import os
 import re
+import sys
 import json
 import shutil
 import hashlib
@@ -46,6 +47,13 @@ USE_GAIN = 0.6
 IMP_BY_FILE = {"关系与约定.md": 5, "事实库.md": 4, "索引.md": 2}
 MIN_HIT = 0.34          # 查询二字组被覆盖的比例门槛
 SKIP_FILES = {"压缩.md"}
+
+# 同目录的 锁.py。走 sys.path 而不是 importlib：全进程共用同一个模块实例，
+# LockTimeout 才是同一个类（except 才接得住）。
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+import 锁  # noqa: E402
 
 # ---- 可选插件：同义扩展（只扩「匹配集合」，不动查询文本）----------------
 SYN_PLUGIN = "同义扩展"   # plugins/同义扩展.json；没有这个文件 = 不启用
@@ -321,35 +329,36 @@ def add(text, *, source="事实库", tags=None):
     if tag_list:
         line += "  " + " ".join("#" + t for t in tag_list)
 
-    existing = None
-    lines = []
-    if os.path.exists(path):
-        with io.open(path, "r", encoding="utf-8", newline="") as f:
-            lines = f.readlines()
-        for i, raw in enumerate(lines, 1):
-            if STATUS_RE.search(raw):
-                continue                      # 作废的旧版本不算「已有」
-            s = raw.strip()
-            if not s.startswith("- "):
-                continue
-            # 行尾的 #标签 不算正文，去重时忽略
-            if re.sub(r"(\s+#\S+)+$", "", s[2:].strip()) == body:
-                existing = i
-                break
-    else:
-        lines = ["# %s\n" % name[:-3], "\n", "## 新增（%s）\n" % datetime.date.today().isoformat(), "\n"]
+    # 读—改—写整段持锁：两个人同时 add，谁也不会把对方刚追加的那行盖掉。
+    # 读不持锁 —— os.replace 是原子的，读者要么看到旧全文，要么看到新全文。
+    with 锁.rewriting(path) as doc:
+        if doc.text:
+            lines = doc.lines()
+            existing = None
+            for i, raw in enumerate(lines, 1):
+                if STATUS_RE.search(raw):
+                    continue                      # 作废的旧版本不算「已有」
+                s = raw.strip()
+                if not s.startswith("- "):
+                    continue
+                # 行尾的 #标签 不算正文，去重时忽略
+                if re.sub(r"(\s+#\S+)+$", "", s[2:].strip()) == body:
+                    existing = i
+                    break
+            if existing:                          # 纯读分支：doc 没改过，不落盘
+                return {"key": body_sha(body), "file": rel(path), "line": existing}
+        else:
+            lines = ["# %s\n" % name[:-3], "\n",
+                     "## 新增（%s）\n" % datetime.date.today().isoformat(), "\n"]
 
-    if existing:
-        return {"key": body_sha(body), "file": rel(path), "line": existing}
-
-    if lines and not lines[-1].endswith("\n"):
-        lines[-1] += "\n"
-    if not lines:
-        lines = ["# %s\n" % name[:-3], "\n"]
-    lines.append(line + "\n")
-    with io.open(path, "w", encoding="utf-8", newline="") as f:
-        f.writelines(lines)
-    return {"key": body_sha(body), "file": rel(path), "line": len(lines)}
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+        if not lines:
+            lines = ["# %s\n" % name[:-3], "\n"]
+        lines.append(line + "\n")
+        doc.text = "".join(lines)
+        n_line = len(lines)
+    return {"key": body_sha(body), "file": rel(path), "line": n_line}
 
 
 # ---- 作废（从 作废.py 抽出来）-------------------------------------------
@@ -400,27 +409,28 @@ def _rekey_ledger(moves):
     if not moves or not os.path.exists(LEDGER):
         return 0
     try:
-        with io.open(LEDGER, "r", encoding="utf-8") as f:
-            data = json.loads(f.read().replace("\ufeff", ""))
+        with 锁.rewriting(LEDGER) as doc:      # 账本也是一份共享 JSON，同样读—改—原子写
+            data = json.loads(doc.text.replace("\ufeff", ""))
+            entries_map = data.get("entries") or {}
+            n = 0
+            for old, new in moves:
+                d = _sha(old)
+                if d not in entries_map:
+                    continue
+                rec = entries_map.pop(d)
+                rec["sha256"] = _sha(new)
+                rec["len"] = len(new)
+                rec["text"] = new[:80]
+                entries_map[rec["sha256"]] = rec
+                n += 1
+            if n:
+                data["entries"] = entries_map
+                doc.text = json.dumps(data, ensure_ascii=False, indent=1)
+            return n
+    except 锁.LockTimeout:
+        raise
     except Exception:
         return -1                                 # -1：账本读不出来
-    entries_map = data.get("entries") or {}
-    n = 0
-    for old, new in moves:
-        d = _sha(old)
-        if d not in entries_map:
-            continue
-        rec = entries_map.pop(d)
-        rec["sha256"] = _sha(new)
-        rec["len"] = len(new)
-        rec["text"] = new[:80]
-        entries_map[rec["sha256"]] = rec
-        n += 1
-    if n:
-        data["entries"] = entries_map
-        with io.open(LEDGER, "w", encoding="utf-8") as f:
-            f.write(json.dumps(data, ensure_ascii=False, indent=1))
-    return n
 
 
 def deprecate(keyword, *, reason, dry=False):
@@ -456,23 +466,26 @@ def deprecate(keyword, *, reason, dry=False):
 
     moves = []
     for p, linenos in by_file.items():
-        bak = _backup(p)
-        with io.open(p, "r", encoding="utf-8", newline="") as f:
-            lines = f.readlines()
-        for i in linenos:
-            raw = lines[i - 1]
-            stripped = raw.rstrip("\r\n")
-            tail = raw[len(stripped):]
-            if STATUS_RE.search(stripped):
-                continue
-            old = stripped.strip()
-            new = stripped.rstrip() + mk
-            lines[i - 1] = new + tail
-            moves.append((old, new))
-            res["changed"] += 1
-        with io.open(p, "w", encoding="utf-8", newline="") as f:
-            f.writelines(lines)
-        res["written"].append({"file": rel(p), "backup": rel(bak)})
+        # 备份 + 改行 + 写回整段持锁；add 可能正在同一文件尾部追加
+        with 锁.rewriting(p) as doc:
+            bak = _backup(p)
+            lines = doc.lines()
+            for i in linenos:
+                if i < 1 or i > len(lines):       # 扫描后行数变了，跳过这条
+                    continue
+                raw = lines[i - 1]
+                stripped = raw.rstrip("\r\n")
+                tail = raw[len(stripped):]
+                if STATUS_RE.search(stripped):
+                    continue
+                old = stripped.strip()
+                new = stripped.rstrip() + mk
+                lines[i - 1] = new + tail
+                moves.append((old, new))
+                res["changed"] += 1
+            if moves:
+                doc.text = "".join(lines)
+            res["written"].append({"file": rel(p), "backup": rel(bak)})
 
     nkey = _rekey_ledger(moves)
     if nkey < 0:

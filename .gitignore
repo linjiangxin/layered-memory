@@ -8,3 +8,6 @@ Thumbs.db
 data/使用记录.jsonl
 data/健康.log
 tests/__pycache__/
+
+# 锁.py 的锁文件（跟目标同目录）
+*.lock

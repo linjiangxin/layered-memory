@@ -60,7 +60,11 @@ def _render(task, path, result, cause, loc, next_try, date):
 
 
 def record(task, *, path="", result="成", cause="", loc="", next_try="", date=None):
-    """追加一条经验。返回 core.add 的 {"key","file","line"}。"""
+    """追加一条经验。返回 core.add 的 {"key","file","line"}。
+
+    这条写路径不自己上锁：core.add 里用 锁.rewriting 把「读—去重—写」整段包住了，
+    多个子代理同时记经验不会互相覆盖。
+    """
     text = _render(task, path, result, cause, loc, next_try, date)
     return core.add(text, source=SOURCE)
 
